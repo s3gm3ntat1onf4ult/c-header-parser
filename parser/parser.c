@@ -22,24 +22,30 @@ void parse(FILE *h)
 	fread(header, len, 1, h);
 	fclose(h);
 	
+	printf("%d bytes read\n%d\n", len, header[len]);
+	
 	// here you can see the tokenizer in action
-	w_token tok = find_wtoken(header, 0);
-	w_token other = find_wtoken(header, tok.end + 1);
-	w_token other2 = find_wtoken(header, other.end + 1);
-
-	printf("Name: %s\nstart: %d\nend: %d\n\n", tok.name, tok.start, tok.end);
-	printf("Name: %s\nstart: %d\nend: %d\n\n", other.name, other.start, other.end);
-	printf("Name: %s\nstart: %d\nend: %d\n\n", other2.name, other2.start, other2.end);
+	int end = 0;
+	w_token token = find_wtoken(header, end);
+	while (memcmp(&token, &EMPTY, sizeof token) != 0)
+	{
+		end = token.end + 1;
+		printf("Name: %s\nstart: %d\nend: %d\n", token.name, token.start, token.end);
+		if (end != len - 1) // prevent infinite loop
+			token = find_wtoken(header, end);
+		else
+			break;
+	}
 }
 
 w_token find_wtoken(char *source, int start)
 {
 	int len = strlen(source);
 	
-	if (start < 0 || start > len)
+	if (start < 0 || start >= len - 1)
 		return;
 	
-	w_token tok;
+	w_token tok = {0};
 	char *word = malloc(20);
 	memset(word, 0, sizeof word);
 
@@ -48,7 +54,35 @@ w_token find_wtoken(char *source, int start)
 	{
 		char ch = source[i];
 		strncat(word, &ch, 1);
+		
+		if (ch == '/' && strlen(word) == 1)
+			if (source[i + 1] == '/')  // comment found
+			{
+				i++;
+				while (source[++i] != '\n');
+				memset(word, 0, sizeof word);
+			}
+			else if (source[i + 1] == '*') // comment found
+			{
+				++i;
+				
+				while (source[++i] != 0)
+					if (source[i] == '*' && source[i + 1] == '/')
+						break;
+						
+				i += 2;
+				memset(word, 0, sizeof word);
+			}
 
+		if (i == len - 1)
+		{
+			tok.end = i;
+			tok.start = i - strlen(word) + 1;
+			tok.name = str_slice(source, tok.start, tok.end + 1);
+
+			return tok;
+		}
+		
 		int b = 0;
 		while ((b++) < sizeof W_DEL)
 		{

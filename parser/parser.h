@@ -10,7 +10,8 @@ typedef struct
 
 }w_token; // word token
 
-static const char W_DEL[] = {' ', '\t'}; // word delimeters
+static const w_token EMPTY = {0};
+static const char W_DEL[] = {' ', '\t', '\n'}; // word delimeters
 
 void parse(FILE*);
 w_token find_wtoken(char*, int);
